@@ -1,38 +1,34 @@
 import React, { memo, useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setBaseUrl, setPath } from '../store/slices/requestSlice';
 import { combineUrl, isFullUrl, parseFullUrl } from '../utils/urlUtils';
-import { HttpMethod, KeyValuePair } from '../types/api';
-
-interface UrlInputProps {
-  baseUrl: string;
-  path: string;
-  method?: HttpMethod;
-  parameters?: KeyValuePair[];
-  onBaseUrlChange: (baseUrl: string, path?: string, parameters?: Array<{ key: string; value: string }>) => void;
-  onPathChange: (path: string, baseUrl?: string, parameters?: Array<{ key: string; value: string }>) => void;
-}
 
 /**
- * URL Input Component with auto-separation functionality
+ * Redux-Connected URL Input Component
+ * No prop drilling! Manages URL state directly through Redux
+ * Follows SRP by focusing only on URL input concerns
  */
-export const UrlInput = memo<UrlInputProps>(({ 
-  baseUrl, 
-  path, 
-  method = 'GET',
-  parameters = [],
-  onBaseUrlChange, 
-  onPathChange 
-}) => {
+export const UrlInput = memo(() => {
+  const dispatch = useAppDispatch();
+  const { baseUrl, path, method, parameters } = useAppSelector(state => state.request);
   const handleBaseUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
     // Check if a full URL was pasted
     if (isFullUrl(inputValue)) {
       const { baseUrl: parsedBaseUrl, path: parsedPath, parameters } = parseFullUrl(inputValue);
-      onBaseUrlChange(parsedBaseUrl, path || parsedPath, parameters);
+      dispatch(setBaseUrl(parsedBaseUrl));
+      if (parsedPath) {
+        dispatch(setPath(parsedPath));
+      }
+      // Handle parameters if provided
+      if (parameters && parameters.length > 0) {
+        console.log('Parameters to add:', parameters);
+      }
     } else {
-      onBaseUrlChange(inputValue);
+      dispatch(setBaseUrl(inputValue));
     }
-  }, [onBaseUrlChange, path]);
+  }, [dispatch]);
 
   const handlePathChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -40,11 +36,18 @@ export const UrlInput = memo<UrlInputProps>(({
     // Check if a full URL was pasted in the path field
     if (isFullUrl(inputValue)) {
       const { baseUrl: parsedBaseUrl, path: parsedPath, parameters } = parseFullUrl(inputValue);
-      onPathChange(parsedPath, baseUrl || parsedBaseUrl, parameters);
+      if (parsedBaseUrl) {
+        dispatch(setBaseUrl(parsedBaseUrl));
+      }
+      dispatch(setPath(parsedPath));
+      // Handle parameters if provided
+      if (parameters && parameters.length > 0) {
+        console.log('Parameters to add:', parameters);
+      }
     } else {
-      onPathChange(inputValue);
+      dispatch(setPath(inputValue));
     }
-  }, [onPathChange, baseUrl]);
+  }, [dispatch]);
 
   const fullUrl = combineUrl(baseUrl, path);
 

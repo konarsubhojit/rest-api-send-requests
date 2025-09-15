@@ -1,46 +1,50 @@
 import React, { memo, useCallback } from 'react';
-import { KeyValuePair, HttpMethod } from '../types/api';
-
-interface ParametersInputProps {
-  parameters: KeyValuePair[];
-  method: HttpMethod;
-  onParameterChange: (index: number, field: 'key' | 'value', value: string) => void;
-  onAddParameter: () => void;
-  onRemoveParameter: (index: number) => void;
-}
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {
+  updateParameter,
+  addParameter,
+  removeParameter
+} from '../store/slices/requestSlice';
 
 /**
- * Parameters Input Component for handling key-value pairs
+ * Parameters Input Component - Redux Connected
+ * No props needed! Connects directly to Redux store
  */
-export const ParametersInput = memo<ParametersInputProps>(({
-  parameters,
-  method,
-  onParameterChange,
-  onAddParameter,
-  onRemoveParameter
-}) => {
+export const ParametersInput = memo(() => {
+  const dispatch = useAppDispatch();
+  const { parameters, method } = useAppSelector(state => state.request);
+
   const handleParameterChange = useCallback((index: number, field: 'key' | 'value') => 
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onParameterChange(index, field, e.target.value);
-    }, [onParameterChange]);
+      dispatch(updateParameter({ index, field, value: e.target.value }));
+    }, [dispatch]);
+
+  const handleAddParameter = useCallback(() => {
+    const newParam = {
+      id: crypto.randomUUID(),
+      key: '',
+      value: ''
+    };
+    dispatch(addParameter(newParam));
+  }, [dispatch]);
 
   const handleRemoveParameter = useCallback((index: number) => () => {
-    onRemoveParameter(index);
-  }, [onRemoveParameter]);
+    dispatch(removeParameter(index));
+  }, [dispatch]);
 
   const isGetRequest = method === 'GET';
   const parameterType = isGetRequest ? 'URL Query Parameters' : 'JSON Body';
 
   return (
-    <div className="mb-4">
-      <label className="form-label fw-bold">
-        Parameters ({parameterType}):
-      </label>
-      <fieldset className="border-0 p-0" aria-label={`${parameterType} list`}>
-        <div className="row g-2">
+    <div className="mb-3">
+      <h6 className="text-muted mb-2">
+        {parameterType}
+      </h6>
+      {parameters.length > 0 ? (
+        <div className="parameter-list">
           {parameters.map((param, index) => (
-            <div key={param.id} className="col-12">
-              <div className="parameter-row input-group input-group-sm d-sm-flex">
+            <div key={param.id} className="mb-2">
+              <div className="parameter-row input-group">
                 <input
                   type="text"
                   value={param.key}
@@ -60,35 +64,28 @@ export const ParametersInput = memo<ParametersInputProps>(({
                 <button
                   type="button"
                   onClick={handleRemoveParameter(index)}
-                  className="btn btn-outline-danger d-flex align-items-center justify-content-center"
+                  className="btn btn-outline-danger"
                   disabled={parameters.length === 1}
                   aria-label={`Remove parameter ${index + 1}`}
                   title="Remove parameter"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" />
-                  </svg>
+                  <i className="bi bi-x" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
           ))}
         </div>
-      </fieldset>
-      <div className="mt-3">
+      ) : null}
+
         <button 
           type="button" 
-          onClick={onAddParameter} 
-          className="btn btn-success btn-add-param"
+        onClick={handleAddParameter}
+        className="btn btn-outline-success btn-sm"
           aria-label="Add new parameter"
         >
-          + Add Parameter
-        </button>
-      </div>
+        <i className="bi bi-plus me-1" aria-hidden="true"></i>
+        Add Parameter
+      </button>
     </div>
   );
 });

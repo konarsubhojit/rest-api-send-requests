@@ -30,19 +30,64 @@ export const useApiRequest = () => {
   }, []);
 
   /**
-   * Build request body for POST/PUT requests
+   * Build request body based on body type and content
    */
-  const buildRequestBody = useCallback((params: KeyValuePair[], method: string): string | null => {
+  const buildRequestBody = useCallback((request: ApiRequest): string | null => {
+    const { method, bodyType, bodyContent, parameters } = request;
+    
     if (method === 'GET' || method === 'HEAD') return null;
     
-    const validParams = params.filter(p => p.key.trim() && p.value.trim());
-    if (validParams.length === 0) return null;
+    // If body type is 'none', fall back to parameters for backward compatibility
+    if (bodyType === 'none') {
+      const validParams = parameters.filter(p => p.key.trim() && p.value.trim());
+      if (validParams.length === 0) return null;
 
-    const body: Record<string, string> = {};
-    validParams.forEach(param => {
-      body[param.key] = param.value;
-    });
-    return JSON.stringify(body);
+      const body: Record<string, string> = {};
+      validParams.forEach(param => {
+        body[param.key] = param.value;
+      });
+      return JSON.stringify(body);
+    }
+    
+    // Use the body content from the editor
+    if (!bodyContent.trim()) return null;
+    
+    return bodyContent;
+  }, []);
+
+  /**
+   * Determine the appropriate Content-Type header based on request configuration
+   */
+  const getContentType = useCallback((request: ApiRequest): string | null => {
+    // Don't set Content-Type for GET/HEAD
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      return null;
+    }
+
+    // Check if user already provided Content-Type
+    const hasCustomContentType = request.headers.some(h => 
+      h.key.toLowerCase() === 'content-type' && h.value.trim()
+    );
+    if (hasCustomContentType) {
+      return null;
+    }
+
+    // Set Content-Type based on body type
+    if (request.bodyType !== 'none') {
+      switch (request.bodyType) {
+        case 'json':
+          return 'application/json';
+        case 'xml':
+          return 'application/xml';
+        case 'form-data':
+          return 'application/x-www-form-urlencoded';
+        case 'raw':
+          return 'text/plain';
+      }
+    }
+
+    // Fallback to JSON for parameter-based body
+    return 'application/json';
   }, []);
 
   /**
@@ -60,6 +105,19 @@ export const useApiRequest = () => {
       const finalUrl = buildUrlWithParams(fullUrl, request.parameters, request.method);
       const headers: Record<string, string> = { ...DEFAULT_HEADERS };
 
+      // Add Content-Type header if needed
+      const requestContentType = getContentType(request);
+      if (requestContentType) {
+        headers['Content-Type'] = requestContentType;
+      }
+
+      // Add custom headers from the headers input
+      const validHeaders = request.headers.filter(h => h.key.trim() && h.value.trim());
+      validHeaders.forEach(header => {
+        headers[header.key] = header.value;
+      });
+
+      // Add auth token if provided (can override custom Authorization header)
       if (request.authToken.trim()) {
         headers['Authorization'] = `Bearer ${request.authToken}`;
       }
@@ -71,7 +129,7 @@ export const useApiRequest = () => {
       };
 
       // Add body for non-GET requests
-      const body = buildRequestBody(request.parameters, request.method);
+      const body = buildRequestBody(request);
       if (body) {
         requestOptions.body = body;
       }
@@ -149,7 +207,7 @@ export const useApiRequest = () => {
     } finally {
       setLoading(false);
     }
-  }, [buildUrlWithParams, buildRequestBody]);
+  }, [buildUrlWithParams, buildRequestBody, getContentType]);
 
   const clearResponse = useCallback(() => {
     setResponses([]);
