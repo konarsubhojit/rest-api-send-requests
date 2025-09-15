@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setBaseUrl, setPath } from '../store/slices/requestSlice';
+import { setBaseUrl, setPath, updateParameter, addParameter } from '../store/slices/requestSlice';
 import { combineUrl, isFullUrl, parseFullUrl } from '../utils/urlUtils';
 
 /**
@@ -23,7 +23,16 @@ export const UrlInput = memo(() => {
       }
       // Handle parameters if provided
       if (parameters && parameters.length > 0) {
-        console.log('Parameters to add:', parameters);
+        parameters.forEach((param, index) => {
+          if (index === 0) {
+            // Update the first parameter slot
+            dispatch(updateParameter({ index: 0, field: 'key', value: param.key }));
+            dispatch(updateParameter({ index: 0, field: 'value', value: param.value }));
+          } else {
+            // Add new parameters
+            dispatch(addParameter({ key: param.key, value: param.value }));
+          }
+        });
       }
     } else {
       dispatch(setBaseUrl(inputValue));
@@ -42,7 +51,16 @@ export const UrlInput = memo(() => {
       dispatch(setPath(parsedPath));
       // Handle parameters if provided
       if (parameters && parameters.length > 0) {
-        console.log('Parameters to add:', parameters);
+        parameters.forEach((param, index) => {
+          if (index === 0) {
+            // Update the first parameter slot
+            dispatch(updateParameter({ index: 0, field: 'key', value: param.key }));
+            dispatch(updateParameter({ index: 0, field: 'value', value: param.value }));
+          } else {
+            // Add new parameters
+            dispatch(addParameter({ key: param.key, value: param.value }));
+          }
+        });
       }
     } else {
       dispatch(setPath(inputValue));
