@@ -18,6 +18,12 @@ export interface ApiResponse {
   data: any;
   headers: Record<string, string>;
   error?: string;
+  timestamp?: string;
+  requestInfo?: {
+    url: string;
+    method: string;
+    hasAuth: boolean;
+  };
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import './App.css';
 
 // Components
@@ -25,23 +25,83 @@ function App() {
     parameters: [{ id: crypto.randomUUID(), key: '', value: '' }]
   });
 
-  const { response, loading, sendRequest, clearResponse } = useApiRequest();
+  const { responses, loading, sendRequest, clearResponse } = useApiRequest();
+  const responsesSectionRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to response section when new response is available
+  useEffect(() => {
+    if (responses.length > 0 && !loading && responsesSectionRef.current) {
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(() => {
+        if (responsesSectionRef.current) {
+          const yOffset = -20; // Offset to show some space above the section
+          const element = responsesSectionRef.current;
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+          window.scrollTo({
+            top: y,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
+  }, [responses.length, loading]);
 
   // URL change handlers
-  const handleBaseUrlChange = useCallback((baseUrl: string, path?: string) => {
-    setRequest(prev => ({
-      ...prev,
-      baseUrl,
-      ...(path !== undefined && { path })
-    }));
+  const handleBaseUrlChange = useCallback((baseUrl: string, path?: string, parameters?: Array<{ key: string; value: string }>) => {
+    setRequest(prev => {
+      const updates: Partial<typeof prev> = {
+        baseUrl,
+        ...(path !== undefined && { path })
+      };
+
+      // If parameters are provided, update them
+      if (parameters && parameters.length > 0) {
+        const newParameters = parameters.map(param => ({
+          id: crypto.randomUUID(),
+          key: param.key,
+          value: param.value
+        }));
+
+        // If there are no existing parameters or only empty ones, replace them
+        if (prev.parameters.length === 1 && !prev.parameters[0].key && !prev.parameters[0].value) {
+          updates.parameters = newParameters;
+        } else {
+          // Otherwise, add to existing parameters
+          updates.parameters = [...prev.parameters, ...newParameters];
+        }
+      }
+
+      return { ...prev, ...updates };
+    });
   }, []);
 
-  const handlePathChange = useCallback((path: string, baseUrl?: string) => {
-    setRequest(prev => ({
-      ...prev,
-      path,
-      ...(baseUrl !== undefined && { baseUrl })
-    }));
+  const handlePathChange = useCallback((path: string, baseUrl?: string, parameters?: Array<{ key: string; value: string }>) => {
+    setRequest(prev => {
+      const updates: Partial<typeof prev> = {
+        path,
+        ...(baseUrl !== undefined && { baseUrl })
+      };
+
+      // If parameters are provided, update them
+      if (parameters && parameters.length > 0) {
+        const newParameters = parameters.map(param => ({
+          id: crypto.randomUUID(),
+          key: param.key,
+          value: param.value
+        }));
+
+        // If there are no existing parameters or only empty ones, replace them
+        if (prev.parameters.length === 1 && !prev.parameters[0].key && !prev.parameters[0].value) {
+          updates.parameters = newParameters;
+        } else {
+          // Otherwise, add to existing parameters
+          updates.parameters = [...prev.parameters, ...newParameters];
+        }
+      }
+
+      return { ...prev, ...updates };
+    });
   }, []);
 
   // Other handlers
@@ -116,6 +176,8 @@ function App() {
                   <UrlInput
                     baseUrl={request.baseUrl}
                     path={request.path}
+                    method={request.method}
+                    parameters={request.parameters}
                     onBaseUrlChange={handleBaseUrlChange}
                     onPathChange={handlePathChange}
                   />
@@ -186,9 +248,28 @@ function App() {
                 </div>
 
                 {/* Response Viewer */}
-                {response && (
-                  <div className="mt-4">
-                    <ResponseDisplay response={response} />
+                {responses.length > 0 && (
+                  <div className="mt-4" ref={responsesSectionRef}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h2 className="h4 mb-0">Request History ({responses.length}/3)</h2>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={clearResponse}
+                        title="Clear all responses"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    {responses.map((response, index) => (
+                      <div key={`${response.timestamp}-${index}`} className="mb-4">
+                        <ResponseDisplay
+                          response={response}
+                          index={index}
+                          isLatest={index === 0}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </main>

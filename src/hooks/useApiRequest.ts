@@ -6,7 +6,7 @@ import { DEFAULT_HEADERS } from '../utils/constants';
  * Custom hook for handling API requests
  */
 export const useApiRequest = () => {
-  const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [responses, setResponses] = useState<ApiResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
   /**
@@ -54,7 +54,6 @@ export const useApiRequest = () => {
     }
 
     setLoading(true);
-    setResponse(null);
 
     try {
       // Build URL and headers
@@ -109,9 +108,19 @@ export const useApiRequest = () => {
         statusText: fetchResponse.statusText,
         data: responseData,
         headers: responseHeaders,
+        timestamp: new Date().toISOString(),
+        requestInfo: {
+          url: finalUrl,
+          method: request.method,
+          hasAuth: !!request.authToken.trim()
+        }
       };
 
-      setResponse(apiResponse);
+      // Add to responses array and keep only last 3
+      setResponses(prev => {
+        const newResponses = [apiResponse, ...prev];
+        return newResponses.slice(0, 3); // Keep only last 3 responses
+      });
       return apiResponse;
 
     } catch (error: any) {
@@ -123,9 +132,19 @@ export const useApiRequest = () => {
         error: error.name === 'AbortError' 
           ? 'Request timed out' 
           : error.message || 'An error occurred while making the request',
+        timestamp: new Date().toISOString(),
+        requestInfo: {
+          url: fullUrl,
+          method: request.method,
+          hasAuth: !!request.authToken.trim()
+        }
       };
 
-      setResponse(errorResponse);
+      // Add error response to responses array
+      setResponses(prev => {
+        const newResponses = [errorResponse, ...prev];
+        return newResponses.slice(0, 3); // Keep only last 3 responses
+      });
       throw error;
     } finally {
       setLoading(false);
@@ -133,11 +152,11 @@ export const useApiRequest = () => {
   }, [buildUrlWithParams, buildRequestBody]);
 
   const clearResponse = useCallback(() => {
-    setResponse(null);
+    setResponses([]);
   }, []);
 
   return {
-    response,
+    responses,
     loading,
     sendRequest,
     clearResponse,
