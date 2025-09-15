@@ -1,314 +1,200 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './App.css';
 
-// TypeScript interfaces
-interface KeyValuePair {
-  key: string;
-  value: string;
-}
+// Components
+import { UrlInput } from './components/UrlInput';
+import { AuthTokenInput } from './components/AuthTokenInput';
+import { ParametersInput } from './components/ParametersInput';
+import { ResponseDisplay } from './components/ResponseDisplay';
 
-interface ApiRequest {
-  url: string;
-  method: string;
-  authToken: string;
-  parameters: KeyValuePair[];
-}
+// Types and utilities
+import { ApiRequest, HttpMethod } from './types/api';
+import { HTTP_METHODS } from './utils/constants';
+import { combineUrl } from './utils/urlUtils';
+import { useApiRequest } from './hooks/useApiRequest';
 
-interface ApiResponse {
-  status: number;
-  statusText: string;
-  data: any;
-  headers: Record<string, string>;
-  error?: string;
-}
-
-// HTTP Methods
-const HTTP_METHODS = [
-  'GET',
-  'POST',
-  'PUT',
-  'DELETE',
-  'PATCH',
-  'HEAD',
-  'OPTIONS'
-];
-
+/**
+ * Main API Request Tool Application
+ */
 function App() {
   const [request, setRequest] = useState<ApiRequest>({
-    url: '',
+    baseUrl: '',
+    path: '',
     method: 'GET',
     authToken: '',
-    parameters: [{ key: '', value: '' }]
+    parameters: [{ id: crypto.randomUUID(), key: '', value: '' }]
   });
-  
-  const [response, setResponse] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  // Handle input changes
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRequest(prev => ({ ...prev, url: e.target.value }));
-  };
+  const { response, loading, sendRequest, clearResponse } = useApiRequest();
 
-  const handleMethodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRequest(prev => ({ ...prev, method: e.target.value }));
-  };
-
-  const handleAuthTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRequest(prev => ({ ...prev, authToken: e.target.value }));
-  };
-
-  // Handle parameter changes
-  const handleParameterChange = (index: number, field: 'key' | 'value', value: string) => {
-    const newParameters = [...request.parameters];
-    newParameters[index][field] = value;
-    setRequest(prev => ({ ...prev, parameters: newParameters }));
-  };
-
-  const addParameter = () => {
+  // URL change handlers
+  const handleBaseUrlChange = useCallback((baseUrl: string, path?: string) => {
     setRequest(prev => ({
       ...prev,
-      parameters: [...prev.parameters, { key: '', value: '' }]
+      baseUrl,
+      ...(path !== undefined && { path })
     }));
-  };
+  }, []);
 
-  const removeParameter = (index: number) => {
-    if (request.parameters.length > 1) {
-      const newParameters = request.parameters.filter((_, i) => i !== index);
-      setRequest(prev => ({ ...prev, parameters: newParameters }));
-    }
-  };
+  const handlePathChange = useCallback((path: string, baseUrl?: string) => {
+    setRequest(prev => ({
+      ...prev,
+      path,
+      ...(baseUrl !== undefined && { baseUrl })
+    }));
+  }, []);
 
-  // Build URL with query parameters for GET requests
-  const buildUrlWithParams = (url: string, params: KeyValuePair[]): string => {
-    if (request.method !== 'GET' || params.length === 0) return url;
-    
-    const validParams = params.filter(p => p.key.trim() && p.value.trim());
-    if (validParams.length === 0) return url;
+  // Other handlers
+  const handleMethodChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRequest(prev => ({ ...prev, method: e.target.value as HttpMethod }));
+    clearResponse(); // Clear response when method changes
+  }, [clearResponse]);
 
-    const urlObj = new URL(url);
-    validParams.forEach(param => {
-      urlObj.searchParams.set(param.key, param.value);
+  const handleAuthTokenChange = useCallback((authToken: string) => {
+    setRequest(prev => ({ ...prev, authToken }));
+  }, []);
+
+  // Parameter handlers
+  const handleParameterChange = useCallback((index: number, field: 'key' | 'value', value: string) => {
+    setRequest(prev => {
+      const newParameters = [...prev.parameters];
+      newParameters[index][field] = value;
+      return { ...prev, parameters: newParameters };
     });
-    return urlObj.toString();
-  };
+  }, []);
 
-  // Build request body for POST/PUT requests
-  const buildRequestBody = (params: KeyValuePair[]): string | null => {
-    if (request.method === 'GET' || request.method === 'HEAD') return null;
-    
-    const validParams = params.filter(p => p.key.trim() && p.value.trim());
-    if (validParams.length === 0) return null;
+  const handleAddParameter = useCallback(() => {
+    setRequest(prev => ({
+      ...prev,
+      parameters: [...prev.parameters, { id: crypto.randomUUID(), key: '', value: '' }]
+    }));
+  }, []);
 
-    const body: Record<string, string> = {};
-    validParams.forEach(param => {
-      body[param.key] = param.value;
+  const handleRemoveParameter = useCallback((index: number) => {
+    setRequest(prev => {
+      if (prev.parameters.length > 1) {
+        const newParameters = prev.parameters.filter((_, i) => i !== index);
+        return { ...prev, parameters: newParameters };
+      }
+      return prev;
     });
-    return JSON.stringify(body);
-  };
+  }, []);
 
-  // Send API request
-  const sendRequest = async () => {
-    if (!request.url.trim()) {
-      alert('Please enter a valid URL');
+  // Send request handler
+  const handleSendRequest = useCallback(async () => {
+    const fullUrl = combineUrl(request.baseUrl, request.path);
+
+    if (!fullUrl.trim()) {
+      alert('Please enter a valid base URL');
       return;
     }
 
-    setLoading(true);
-    setResponse(null);
-
     try {
-      // Build URL and headers
-      const finalUrl = buildUrlWithParams(request.url, request.parameters);
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (request.authToken.trim()) {
-        headers['Authorization'] = `Bearer ${request.authToken}`;
-      }
-
-      // Build request options
-      const requestOptions: RequestInit = {
-        method: request.method,
-        headers,
-      };
-
-      // Add body for non-GET requests
-      const body = buildRequestBody(request.parameters);
-      if (body) {
-        requestOptions.body = body;
-      }
-
-      // Make the request
-      const fetchResponse = await fetch(finalUrl, requestOptions);
-      
-      // Parse response
-      let responseData;
-      const contentType = fetchResponse.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        responseData = await fetchResponse.json();
-      } else {
-        responseData = await fetchResponse.text();
-      }
-
-      // Build response headers object
-      const responseHeaders: Record<string, string> = {};
-      fetchResponse.headers.forEach((value, key) => {
-        responseHeaders[key] = value;
-      });
-
-      setResponse({
-        status: fetchResponse.status,
-        statusText: fetchResponse.statusText,
-        data: responseData,
-        headers: responseHeaders,
-      });
-
-    } catch (error: any) {
-      setResponse({
-        status: 0,
-        statusText: 'Error',
-        data: null,
-        headers: {},
-        error: error.message || 'An error occurred while making the request',
-      });
-    } finally {
-      setLoading(false);
+      await sendRequest(request, fullUrl);
+    } catch (error) {
+      // Error is already handled in the hook
+      console.error('Request failed:', error);
     }
-  };
+  }, [request, sendRequest]);
+
+  const fullUrl = combineUrl(request.baseUrl, request.path);
+  const isRequestValid = fullUrl.trim().length > 0;
 
   return (
     <div className="App">
-      <div className="container">
-        <h1>API Request Tool</h1>
-        
-        {/* URL Input */}
-        <div className="form-group">
-          <label htmlFor="url">Endpoint URL:</label>
-          <input
-            id="url"
-            type="text"
-            value={request.url}
-            onChange={handleUrlChange}
-            placeholder="https://api.example.com/endpoint"
-            className="form-control"
-          />
-        </div>
+      <div className="container-fluid px-3 px-sm-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-xl-10">
+            <div className="main-container p-3 p-md-4 p-lg-5">
+              <header className="text-center mb-4 mb-md-5">
+                <h1 className="display-4 display-md-3">API Request Tool</h1>
+              </header>
 
-        {/* HTTP Method Dropdown */}
-        <div className="form-group">
-          <label htmlFor="method">HTTP Method:</label>
-          <select
-            id="method"
-            value={request.method}
-            onChange={handleMethodChange}
-            className="form-control"
-          >
-            {HTTP_METHODS.map(method => (
-              <option key={method} value={method}>{method}</option>
-            ))}
-          </select>
-        </div>
+              <main>
+                {/* URL Input */}
+                <div className="mb-4">
+                  <UrlInput
+                    baseUrl={request.baseUrl}
+                    path={request.path}
+                    onBaseUrlChange={handleBaseUrlChange}
+                    onPathChange={handlePathChange}
+                  />
+                </div>
 
-        {/* Authorization Token */}
-        <div className="form-group">
-          <label htmlFor="auth">Authorization (Bearer Token):</label>
-          <input
-            id="auth"
-            type="text"
-            value={request.authToken}
-            onChange={handleAuthTokenChange}
-            placeholder="Enter your bearer token (optional)"
-            className="form-control"
-          />
-        </div>
+                {/* HTTP Method and Auth Token Row */}
+                <div className="row g-3 mb-4">
+                  <div className="col-12 col-md-6">
+                    <label htmlFor="method" className="form-label fw-bold">HTTP Method:</label>
+                    <select
+                      id="method"
+                      value={request.method}
+                      onChange={handleMethodChange}
+                      className="form-select"
+                      aria-describedby="method-help"
+                    >
+                      {HTTP_METHODS.map(method => (
+                        <option key={method} value={method}>{method}</option>
+                      ))}
+                    </select>
+                    <div id="method-help" className="form-text">
+                      Choose the HTTP method for your request
+                    </div>
+                  </div>
 
-        {/* Parameters Section */}
-        <div className="form-group">
-          <label>
-            Parameters 
-            {request.method === 'GET' ? ' (URL Query Parameters)' : ' (JSON Body)'}:
-          </label>
-          {request.parameters.map((param, index) => (
-            <div key={index} className="parameter-row">
-              <input
-                type="text"
-                value={param.key}
-                onChange={(e) => handleParameterChange(index, 'key', e.target.value)}
-                placeholder="Key"
-                className="param-input"
-              />
-              <input
-                type="text"
-                value={param.value}
-                onChange={(e) => handleParameterChange(index, 'value', e.target.value)}
-                placeholder="Value"
-                className="param-input"
-              />
-              <button
-                type="button"
-                onClick={() => removeParameter(index)}
-                className="btn btn-remove"
-                disabled={request.parameters.length === 1}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <button type="button" onClick={addParameter} className="btn btn-add">
-            Add Parameter
-          </button>
-        </div>
+                  <div className="col-12 col-md-6">
+                    <AuthTokenInput
+                      authToken={request.authToken}
+                      onAuthTokenChange={handleAuthTokenChange}
+                    />
+                  </div>
+                </div>
 
-        {/* Send Request Button */}
-        <div className="form-group">
-          <button
-            onClick={sendRequest}
-            disabled={loading || !request.url.trim()}
-            className="btn btn-primary"
-          >
-            {loading ? 'Sending...' : 'Send Request'}
-          </button>
-        </div>
+                {/* Parameters Section */}
+                <div className="mb-4">
+                  <ParametersInput
+                    parameters={request.parameters}
+                    method={request.method}
+                    onParameterChange={handleParameterChange}
+                    onAddParameter={handleAddParameter}
+                    onRemoveParameter={handleRemoveParameter}
+                  />
+                </div>
 
-        {/* Response Viewer */}
-        {response && (
-          <div className="response-section">
-            <h2>Response</h2>
-            
-            {/* Status */}
-            <div className="response-status">
-              <span className={`status-code ${response.status >= 200 && response.status < 300 ? 'success' : 'error'}`}>
-                {response.status} {response.statusText}
-              </span>
-            </div>
+                {/* Send Request Button */}
+                <div className="d-grid gap-2 mb-4">
+                  <button
+                    onClick={handleSendRequest}
+                    disabled={loading || !isRequestValid}
+                    className="btn btn-primary btn-lg btn-send-request"
+                    aria-describedby="send-help"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm loading-spinner me-2" aria-hidden="true"></span>
+                        <span className="visually-hidden">Loading...</span>
+                        {'Sending Request...'}
+                      </>
+                    ) : (
+                      'Send Request'
+                    )}
+                  </button>
+                  {!isRequestValid && (
+                    <div id="send-help" className="text-muted text-center">
+                      Please enter a valid URL to send the request
+                    </div>
+                  )}
+                </div>
 
-            {/* Error */}
-            {response.error && (
-              <div className="error-message">
-                <strong>Error:</strong> {response.error}
-              </div>
-            )}
-
-            {/* Headers */}
-            <div className="response-headers">
-              <h3>Headers:</h3>
-              <pre>{JSON.stringify(response.headers, null, 2)}</pre>
-            </div>
-
-            {/* Response Data */}
-            <div className="response-body">
-              <h3>Response Body:</h3>
-              <pre className="json-response">
-                {typeof response.data === 'string' 
-                  ? response.data 
-                  : JSON.stringify(response.data, null, 2)
-                }
-              </pre>
+                {/* Response Viewer */}
+                {response && (
+                  <div className="mt-4">
+                    <ResponseDisplay response={response} />
+                  </div>
+                )}
+              </main>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "API Tool",
+  "name": "REST API Request Tool",
+  "description": "Modern REST API testing tool for developers",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,11 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#007bff",
+  "background_color": "#ffffff",
+  "categories": [
+    "developer",
+    "productivity",
+    "utilities"
+  ]
 }
