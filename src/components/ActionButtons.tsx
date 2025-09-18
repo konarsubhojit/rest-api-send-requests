@@ -34,9 +34,6 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
   const fullUrl = useAppSelector(selectFullUrl);
   const isRequestValid = useAppSelector(selectIsRequestValid);
 
-  // Debug current state
-  console.log('🔍 ActionButtons state:', { fullUrl, isRequestValid, loading });
-
   const handleSendRequest = useCallback(async () => {
     console.log('🚀 Send request clicked!');
     console.log('📋 Request data:', request);

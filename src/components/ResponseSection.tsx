@@ -12,14 +12,12 @@ interface ResponseSectionProps {
  * Handles displaying all API responses
  */
 export function ResponseSection({ responses, loading }: ResponseSectionProps) {
-  console.log('📊 ResponseSection render - responses:', responses.length, 'loading:', loading);
-
   return (
     <div className="mt-4">
       {loading && (
         <div className="card border-0 shadow-sm">
           <div className="card-body text-center p-4">
-            <div className="spinner-border text-primary me-2" role="status" aria-hidden="true"></div>
+            <div className="spinner-border text-primary me-2" aria-label="Loading..."></div>
             <span>Sending request...</span>
           </div>
         </div>
@@ -28,7 +26,7 @@ export function ResponseSection({ responses, loading }: ResponseSectionProps) {
       {responses.length === 0 && !loading && (
         <div className="card border-0 shadow-sm">
           <div className="card-body text-center p-4 text-muted">
-            <i className="bi bi-info-circle me-2"></i>
+            <i className="bi bi-info-circle me-2" aria-hidden="true"></i>{' '}
             No requests sent yet. Enter a URL and click "Send Request" to see the response here.
           </div>
         </div>
