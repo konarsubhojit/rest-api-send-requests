@@ -12,9 +12,7 @@ interface ResponseSectionProps {
  * Handles displaying all API responses
  */
 export function ResponseSection({ responses, loading }: ResponseSectionProps) {
-  if (responses.length === 0 && !loading) {
-    return null;
-  }
+  console.log('📊 ResponseSection render - responses:', responses.length, 'loading:', loading);
 
   return (
     <div className="mt-4">
@@ -27,6 +25,15 @@ export function ResponseSection({ responses, loading }: ResponseSectionProps) {
         </div>
       )}
       
+      {responses.length === 0 && !loading && (
+        <div className="card border-0 shadow-sm">
+          <div className="card-body text-center p-4 text-muted">
+            <i className="bi bi-info-circle me-2"></i>
+            No requests sent yet. Enter a URL and click "Send Request" to see the response here.
+          </div>
+        </div>
+      )}
+
       {responses.map((response, index) => (
         <div key={`response-${index}-${response.timestamp}`} className="mb-3">
           <ResponseDisplay 

@@ -30,7 +30,7 @@ export function ApplicationController() {
   const { activeTab } = useAppSelector(state => state.ui);
   const request = useAppSelector(state => state.request);
   
-  const { responses, loading } = useApiRequest();
+  const { responses, loading, sendRequest } = useApiRequest();
 
   // Focused event handlers - minimal UI orchestration only
   const handleTabChange = useCallback((tab: 'request' | 'saved') => {
@@ -101,7 +101,7 @@ export function ApplicationController() {
                   <RequestFormModular />
 
                   {/* Action Buttons - Redux Connected */}
-                  <ActionButtons />
+                  <ActionButtons onSendRequest={sendRequest} loading={loading} />
 
                   {/* Response Section */}
                   <ResponseSection responses={responses} loading={loading} />

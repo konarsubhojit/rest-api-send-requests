@@ -14,35 +14,49 @@ import {
   setBodyContent,
   setAuthToken
 } from '../store/slices/requestSlice';
-import { useApiRequest } from '../hooks/useApiRequest';
+import { ApiRequest } from '../types/api';
 import { CurlUtils } from '../utils/curlUtils';
 import { parseFullUrl } from '../utils/urlUtils';
 
+interface ActionButtonsProps {
+  onSendRequest: (request: ApiRequest, fullUrl: string) => Promise<any>;
+  loading: boolean;
+}
+
 /**
- * Action Buttons Component - Redux Connected
- * No prop drilling! Connects directly to Redux store
- * Follows SOLID principles by managing its own state dependencies
+ * Action Buttons Component - Redux Connected with sendRequest prop
+ * No prop drilling! Connects directly to Redux store for request data
+ * Accepts sendRequest function to ensure single source of truth
  */
-export function ActionButtons() {
+export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
   const dispatch = useAppDispatch();
   const request = useAppSelector(state => state.request);
   const fullUrl = useAppSelector(selectFullUrl);
   const isRequestValid = useAppSelector(selectIsRequestValid);
-  
-  const { loading, sendRequest } = useApiRequest();
+
+  // Debug current state
+  console.log('🔍 ActionButtons state:', { fullUrl, isRequestValid, loading });
 
   const handleSendRequest = useCallback(async () => {
+    console.log('🚀 Send request clicked!');
+    console.log('📋 Request data:', request);
+    console.log('🌐 Full URL:', fullUrl);
+    console.log('✅ Is valid:', isRequestValid);
+
     if (!fullUrl.trim()) {
+      console.log('❌ No URL provided');
       alert('Please enter a valid base URL');
       return;
     }
 
     try {
-      await sendRequest(request, fullUrl);
+      console.log('📡 Sending request...');
+      const result = await onSendRequest(request, fullUrl);
+      console.log('✅ Request completed:', result);
     } catch (error) {
-      console.error('Request failed:', error);
+      console.error('❌ Request failed:', error);
     }
-  }, [request, fullUrl, sendRequest]);
+  }, [request, fullUrl, onSendRequest, isRequestValid]);
 
   const handleExportCurl = useCallback(() => {
     try {
@@ -129,6 +143,7 @@ export function ActionButtons() {
         disabled={!isRequestValid || loading}
         className="btn btn-primary"
         type="button"
+        title={`Valid: ${isRequestValid}, Loading: ${loading}, URL: "${fullUrl}"`}
       >
         {loading ? (
           <>

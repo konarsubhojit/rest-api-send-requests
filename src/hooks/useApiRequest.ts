@@ -94,10 +94,16 @@ export const useApiRequest = () => {
    * Send API request
    */
   const sendRequest = useCallback(async (request: ApiRequest, fullUrl: string) => {
+    console.log('🔥 sendRequest hook called!');
+    console.log('📋 Request:', request);
+    console.log('🌐 URL:', fullUrl);
+    
     if (!fullUrl.trim()) {
+      console.log('❌ Empty URL in hook');
       throw new Error('Please enter a valid URL');
     }
 
+    console.log('⏳ Setting loading to true');
     setLoading(true);
 
     try {
@@ -177,11 +183,14 @@ export const useApiRequest = () => {
       // Add to responses array and keep only last 3
       setResponses(prev => {
         const newResponses = [apiResponse, ...prev];
+        console.log('✅ Setting new responses:', newResponses);
         return newResponses.slice(0, 3); // Keep only last 3 responses
       });
+      console.log('🎉 Request successful, returning response');
       return apiResponse;
 
     } catch (error: any) {
+      console.log('💥 Request error caught:', error);
       const errorResponse: ApiResponse = {
         status: 0,
         statusText: 'Error',
@@ -201,8 +210,10 @@ export const useApiRequest = () => {
       // Add error response to responses array
       setResponses(prev => {
         const newResponses = [errorResponse, ...prev];
+        console.log('💥 Setting error response:', newResponses);
         return newResponses.slice(0, 3); // Keep only last 3 responses
       });
+      console.log('🔥 Throwing error:', error);
       throw error;
     } finally {
       setLoading(false);
