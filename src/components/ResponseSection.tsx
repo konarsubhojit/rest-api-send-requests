@@ -3,8 +3,8 @@ import { ResponseDisplay } from './ResponseDisplay';
 import { ApiResponse } from '../types/api';
 
 interface ResponseSectionProps {
-  responses: ApiResponse[];
-  loading: boolean;
+  readonly responses: ApiResponse[];
+  readonly loading: boolean;
 }
 
 /**

@@ -40,12 +40,11 @@ test('send button is disabled when no URL is provided', () => {
 });
 
 test('displays URL preview when base URL is entered', async () => {
-  const user = userEvent.setup();
   render(<App />);
   const baseUrlInput = screen.getByLabelText(/base url/i);
 
   // Enter a base URL
-  await user.type(baseUrlInput, 'https://api.example.com');
+  await userEvent.type(baseUrlInput, 'https://api.example.com');
 
   // Check that the input has the value
   expect(baseUrlInput).toHaveValue('https://api.example.com');

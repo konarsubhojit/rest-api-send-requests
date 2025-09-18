@@ -19,8 +19,8 @@ import { CurlUtils } from '../utils/curlUtils';
 import { parseFullUrl } from '../utils/urlUtils';
 
 interface ActionButtonsProps {
-  onSendRequest: (request: ApiRequest, fullUrl: string) => Promise<any>;
-  loading: boolean;
+  readonly onSendRequest: (request: ApiRequest, fullUrl: string) => Promise<any>;
+  readonly loading: boolean;
 }
 
 /**
@@ -35,25 +35,17 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
   const isRequestValid = useAppSelector(selectIsRequestValid);
 
   const handleSendRequest = useCallback(async () => {
-    console.log('🚀 Send request clicked!');
-    console.log('📋 Request data:', request);
-    console.log('🌐 Full URL:', fullUrl);
-    console.log('✅ Is valid:', isRequestValid);
-
     if (!fullUrl.trim()) {
-      console.log('❌ No URL provided');
       alert('Please enter a valid base URL');
       return;
     }
 
     try {
-      console.log('📡 Sending request...');
-      const result = await onSendRequest(request, fullUrl);
-      console.log('✅ Request completed:', result);
+      await onSendRequest(request, fullUrl);
     } catch (error) {
       console.error('❌ Request failed:', error);
     }
-  }, [request, fullUrl, onSendRequest, isRequestValid]);
+  }, [request, fullUrl, onSendRequest]);
 
   const handleExportCurl = useCallback(() => {
     try {
@@ -144,12 +136,12 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
       >
         {loading ? (
           <>
-            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <span className="spinner-border spinner-border-sm me-2" aria-label="Loading..."></span>{' '}
             Sending...
           </>
         ) : (
           <>
-            <i className="bi bi-send me-1" aria-hidden="true"></i>
+              <i className="bi bi-send me-1" aria-hidden="true"></i>{' '}
             Send Request
           </>
         )}
@@ -161,7 +153,7 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
         className="btn btn-outline-secondary"
         type="button"
       >
-        <i className="bi bi-download me-1" aria-hidden="true"></i>
+        <i className="bi bi-download me-1" aria-hidden="true"></i>{' '}
         Export cURL
       </button>
 
@@ -170,7 +162,7 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
         className="btn btn-outline-secondary"
         type="button"
       >
-        <i className="bi bi-upload me-1" aria-hidden="true"></i>
+        <i className="bi bi-upload me-1" aria-hidden="true"></i>{' '}
         Import cURL
       </button>
     </div>
