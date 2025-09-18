@@ -1,7 +1,6 @@
 import { SavedRequest, ApiRequest, RequestHistory } from '../types/api';
 
 const STORAGE_KEY = 'rest-api-saved-requests';
-const HISTORY_KEY = 'rest-api-request-history';
 
 /**
  * Utility functions for managing saved requests and history
