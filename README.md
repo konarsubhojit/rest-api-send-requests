@@ -1,9 +1,10 @@
 # REST API Request Tool
 
-A modern, accessible REST API testing tool built with React and TypeScript. This tool provides an intuitive interface for testing REST APIs with features like automatic URL parsing, secure token management, and comprehensive response display.
+A modern, accessible REST API testing tool built with React, Next.js, and TypeScript. This tool provides an intuitive interface for testing REST APIs with features like automatic URL parsing, secure token management, and comprehensive response display.
 
-![API Request Tool](https://img.shields.io/badge/React-19.x-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-4.x-blue.svg)
+![Next.js](https://img.shields.io/badge/Next.js-15.x-black.svg)
+![React](https://img.shields.io/badge/React-19.x-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)
 ![Accessibility](https://img.shields.io/badge/a11y-WCAG%202.1-green.svg)
 
 ## ✨ Features
@@ -63,7 +64,7 @@ A modern, accessible REST API testing tool built with React and TypeScript. This
 
 3. **Start the development server**
    ```bash
-   npm start
+   npm run dev
    ```
 
 4. **Open your browser**
@@ -136,10 +137,10 @@ npm test -- --coverage
 
 ## 🔧 **Available Scripts**
 
-- `npm start` - Start development server
-- `npm test` - Run test suite
-- `npm run build` - Build for production
-- `npm run eject` - Eject from Create React App (one-way operation)
+- `npm run dev` - Start Next.js development server
+- `npm test` - Run test suite with Vitest
+- `npm run build` - Build for production (static export)
+- `npm run start` - Start production server
 
 ## 🎨 **Customization**
 
