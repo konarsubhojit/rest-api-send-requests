@@ -17,6 +17,7 @@ import {
 import { ApiRequest } from '../types/api';
 import { CurlUtils } from '../utils/curlUtils';
 import { parseFullUrl } from '../utils/urlUtils';
+import { RequestStorageService } from '../utils/requestStorage';
 
 interface ActionButtonsProps {
   readonly onSendRequest: (request: ApiRequest, fullUrl: string) => Promise<any>;
@@ -125,6 +126,18 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
     }
   }, [dispatch]);
 
+  const handleShare = useCallback(async () => {
+    const fragment = RequestStorageService.createShareFragment(request, fullUrl);
+    const shareUrl = `${window.location.origin}${window.location.pathname}${fragment}`;
+    window.location.hash = fragment;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Secret-free share URL copied to clipboard.');
+    } catch {
+      prompt('Copy this secret-free share URL:', shareUrl);
+    }
+  }, [request, fullUrl]);
+
   return (
     <div className="d-flex flex-wrap gap-2 mb-4">
       <button
@@ -164,6 +177,15 @@ export function ActionButtons({ onSendRequest, loading }: ActionButtonsProps) {
       >
         <i className="bi bi-upload me-1" aria-hidden="true"></i>{' '}
         Import cURL
+      </button>
+
+      <button
+        onClick={handleShare}
+        disabled={!isRequestValid}
+        className="btn btn-outline-secondary"
+        type="button"
+      >
+        Share Request
       </button>
     </div>
   );

@@ -21,6 +21,8 @@ export interface ApiResponse {
   data: any;
   headers: Record<string, string>;
   error?: string;
+  corsLikely?: boolean;
+  viaProxy?: boolean;
   timestamp?: string;
   requestInfo?: {
     url: string;
@@ -47,6 +49,7 @@ export interface SavedRequest {
   createdAt: string;
   lastUsed: string;
   tags: string[];
+  folder: string;
 }
 
 export interface RequestHistory {

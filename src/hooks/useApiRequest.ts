@@ -5,9 +5,12 @@ import { DEFAULT_HEADERS } from '../utils/constants';
 /**
  * Custom hook for handling API requests
  */
-export const useApiRequest = () => {
+export const useApiRequest = (
+  proxyUrl: string = import.meta.env.REACT_APP_PROXY_URL || ''
+) => {
   const [responses, setResponses] = useState<ApiResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
 
   /**
    * Build URL with query parameters for GET requests
@@ -94,16 +97,20 @@ export const useApiRequest = () => {
    * Send API request
    */
   const sendRequest = useCallback(async (request: ApiRequest, fullUrl: string) => {
-    console.log('🔥 sendRequest hook called!');
-    console.log('📋 Request:', request);
-    console.log('🌐 URL:', fullUrl);
-    
     if (!fullUrl.trim()) {
-      console.log('❌ Empty URL in hook');
       throw new Error('Please enter a valid URL');
     }
 
-    console.log('⏳ Setting loading to true');
+    const hasCredentials = request.authToken.trim() ||
+      request.headers.some(header =>
+        header.key.trim().toLowerCase() === 'authorization' && header.value.trim()
+      );
+    if (useProxy && hasCredentials && !window.confirm(
+      'This request includes credentials. They will transit the configured CORS proxy. Continue?'
+    )) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -144,10 +151,19 @@ export const useApiRequest = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const fetchResponse = await fetch(finalUrl, {
-        ...requestOptions,
-        signal: controller.signal,
-      });
+      const fetchResponse = useProxy
+        ? await fetch(proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: finalUrl,
+              method: request.method,
+              headers,
+              body: requestOptions.body
+            }),
+            signal: controller.signal
+          })
+        : await fetch(finalUrl, { ...requestOptions, signal: controller.signal });
 
       clearTimeout(timeoutId);
       
@@ -172,25 +188,24 @@ export const useApiRequest = () => {
         statusText: fetchResponse.statusText,
         data: responseData,
         headers: responseHeaders,
+        viaProxy: useProxy,
         timestamp: new Date().toISOString(),
         requestInfo: {
           url: finalUrl,
           method: request.method,
-          hasAuth: !!request.authToken.trim()
+          hasAuth: !!hasCredentials
         }
       };
 
       // Add to responses array and keep only last 3
       setResponses(prev => {
         const newResponses = [apiResponse, ...prev];
-        console.log('✅ Setting new responses:', newResponses);
         return newResponses.slice(0, 3); // Keep only last 3 responses
       });
-      console.log('🎉 Request successful, returning response');
       return apiResponse;
 
     } catch (error: any) {
-      console.log('💥 Request error caught:', error);
+      const corsLikely = !useProxy && error?.name === 'TypeError';
       const errorResponse: ApiResponse = {
         status: 0,
         statusText: 'Error',
@@ -199,26 +214,26 @@ export const useApiRequest = () => {
         error: error.name === 'AbortError' 
           ? 'Request timed out' 
           : error.message || 'An error occurred while making the request',
+        corsLikely,
+        viaProxy: useProxy,
         timestamp: new Date().toISOString(),
         requestInfo: {
           url: fullUrl,
           method: request.method,
-          hasAuth: !!request.authToken.trim()
+          hasAuth: !!hasCredentials
         }
       };
 
       // Add error response to responses array
       setResponses(prev => {
         const newResponses = [errorResponse, ...prev];
-        console.log('💥 Setting error response:', newResponses);
         return newResponses.slice(0, 3); // Keep only last 3 responses
       });
-      console.log('🔥 Throwing error:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [buildUrlWithParams, buildRequestBody, getContentType]);
+  }, [buildUrlWithParams, buildRequestBody, getContentType, proxyUrl, useProxy]);
 
   const clearResponse = useCallback(() => {
     setResponses([]);
@@ -229,5 +244,8 @@ export const useApiRequest = () => {
     loading,
     sendRequest,
     clearResponse,
+    proxyAvailable: Boolean(proxyUrl),
+    useProxy,
+    setUseProxy,
   };
 };

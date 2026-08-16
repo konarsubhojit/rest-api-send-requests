@@ -1,0 +1,14 @@
+name = "rest-api-cors-proxy"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+PER_IP_DAILY_LIMIT = "100"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimiter"]
