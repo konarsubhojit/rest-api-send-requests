@@ -2,6 +2,8 @@
 
 A modern, accessible REST API testing tool built with React and TypeScript. This tool provides an intuitive interface for testing REST APIs with features like automatic URL parsing, secure token management, and comprehensive response display.
 
+**Deployed app:** https://rest-api-send-requests.pages.dev
+
 ![API Request Tool](https://img.shields.io/badge/React-19.x-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-4.x-blue.svg)
 ![Accessibility](https://img.shields.io/badge/a11y-WCAG%202.1-green.svg)
@@ -42,6 +44,20 @@ A modern, accessible REST API testing tool built with React and TypeScript. This
 - **TypeScript**: Full type safety and IntelliSense support
 - **Custom Hooks**: Clean separation of concerns
 
+### 📁 **Saved Collections**
+- Save named requests locally and organize them into folders
+- Rename, duplicate, delete, import, and export collections
+- Share requests using URL fragments without uploading them
+- Authorization tokens and `Authorization` header values are always replaced with a placeholder
+  before save/export and excluded from shared links. Re-enter them after loading.
+
+### 🌐 **Optional CORS Proxy**
+- Direct browser requests remain the default
+- Likely CORS failures suggest the configured proxy
+- Proxied responses retain upstream status, readable headers, and body, including errors
+- Responses identify whether they were fetched directly or through the proxy
+- Credentialed proxy requests require confirmation every time
+
 ## 🛠️ **Installation & Setup**
 
 ### Prerequisites
@@ -58,12 +74,12 @@ A modern, accessible REST API testing tool built with React and TypeScript. This
 
 2. **Install dependencies**
    ```bash
-   npm install
+   npm ci
    ```
 
 3. **Start the development server**
    ```bash
-   npm start
+   npm run dev
    ```
 
 4. **Open your browser**
@@ -101,6 +117,38 @@ A modern, accessible REST API testing tool built with React and TypeScript. This
 - **Response Analysis**: Examine headers, status codes, and formatted response data
 - **Error Handling**: Clear error messages for network issues, timeouts, and API errors
 
+## Cloudflare proxy setup
+
+The proxy is intentionally **opt-in** and the toggle is hidden unless configured.
+
+1. Deploy the Worker and its Durable Object:
+   ```bash
+   cd worker
+   npx wrangler deploy
+   ```
+2. Set `REACT_APP_PROXY_URL` to the deployed Worker URL when building:
+   ```bash
+   REACT_APP_PROXY_URL=https://rest-api-cors-proxy.example.workers.dev npm run build
+   ```
+   For GitHub deployment, create a repository variable with that name.
+3. Configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+   Cloudflare Pages previews deploy for pull requests. Without secrets, tests and builds still run
+   while deploy steps skip.
+
+### Proxy security model and limitations
+
+An unrestricted proxy is an abuse and SSRF risk. This Worker accepts only HTTP(S), resolves and
+checks A/AAAA answers against private, loopback, link-local, unique-local, reserved, and multicast
+ranges, re-validates every redirect, removes hop-by-hop headers, enforces 1 MiB request and 5 MiB
+response limits, applies a 15-second timeout, and rate-limits each source IP with a Durable Object.
+Cloudflare's free plan also enforces its 100,000 requests/day account limit.
+
+DNS validation reduces SSRF risk but cannot provide the same isolation as a dedicated egress
+firewall. Public DNS and destination ownership can change, response headers may contain sensitive
+data, and users can deliberately send credentials through the Worker after confirming the warning.
+Operate your own Worker, monitor it, choose a conservative `PER_IP_DAILY_LIMIT`, and do not enable
+the proxy for requests you do not trust.
+
 ## 🏗️ **Project Structure**
 
 ```
@@ -136,10 +184,9 @@ npm test -- --coverage
 
 ## 🔧 **Available Scripts**
 
-- `npm start` - Start development server
+- `npm run dev` - Start development server
 - `npm test` - Run test suite
 - `npm run build` - Build for production
-- `npm run eject` - Eject from Create React App (one-way operation)
 
 ## 🎨 **Customization**
 
@@ -158,7 +205,7 @@ Modify default settings in `src/utils/constants.ts`:
 
 - **Token Security**: Bearer tokens use password input type and are hidden by default
 - **Input Sanitization**: Proper input validation and sanitization
-- **CORS Handling**: Proper CORS header management
+- **CORS Handling**: Direct by default with an explicitly enabled, hardened proxy
 - **Timeout Protection**: 30-second request timeout to prevent hanging requests
 
 ## 🌐 **Browser Support**
@@ -189,7 +236,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 **Acknowledgments**
 
-- Built with [Create React App](https://create-react-app.dev/)
+- Built with [Vite](https://vite.dev/)
 - Icons and design inspiration from modern API tools
 - Accessibility guidelines from [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)
 

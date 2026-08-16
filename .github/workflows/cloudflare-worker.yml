@@ -1,0 +1,41 @@
+name: Test and deploy Cloudflare Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - worker/**
+      - .github/workflows/cloudflare-worker.yml
+  pull_request:
+    paths:
+      - worker/**
+      - .github/workflows/cloudflare-worker.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run worker/src/index.test.js
+      - name: Deploy Worker
+        if: github.event_name != 'pull_request' && env.CF_API_TOKEN != '' && env.CF_ACCOUNT_ID != ''
+        uses: cloudflare/wrangler-action@v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+      - name: Deployment unavailable
+        if: github.event_name != 'pull_request' && (env.CF_API_TOKEN == '' || env.CF_ACCOUNT_ID == '')
+        run: echo "Cloudflare secrets are not configured; Worker tests completed, deployment skipped."

@@ -57,6 +57,11 @@ export const ResponseDisplay = memo<ResponseDisplayProps>(({ response, index = 0
           {response.timestamp && (
             <small className="text-muted">{formatTimestamp(response.timestamp)}</small>
           )}
+          <div>
+            <span className={`badge ${response.viaProxy ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+              {response.viaProxy ? 'Fetched through CORS proxy' : 'Fetched directly'}
+            </span>
+          </div>
         </div>
         <button
           type="button"
@@ -90,6 +95,12 @@ export const ResponseDisplay = memo<ResponseDisplayProps>(({ response, index = 0
         {response.error && (
           <div className="alert alert-danger error-alert" role="alert">
             <strong>Error:</strong> {response.error}
+          </div>
+        )}
+        {response.corsLikely && (
+          <div className="alert alert-info" role="status">
+            This looks like a browser CORS block. If you trust the configured proxy, enable
+            “Use CORS proxy” and retry.
           </div>
         )}
 

@@ -1,13 +1,16 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setActiveTab } from '../../store/slices/uiSlice';
-import { setAuthToken } from '../../store/slices/requestSlice';
+import { loadRequest, selectFullUrl, setAuthToken } from '../../store/slices/requestSlice';
 import { RequestFormModular } from '../modular/RequestFormModular';
 import { ActionButtons } from '../ActionButtons';
 import { ResponseSection } from '../ResponseSection';
 import SavedRequests from '../SavedRequests';
 import { AuthTokenInput } from '../AuthTokenInput';
 import { useApiRequest } from '../../hooks/useApiRequest';
+import { ProxyToggle } from '../ProxyToggle';
+import { RequestStorageService } from '../../utils/requestStorage';
+import { SavedRequest } from '../../types/api';
 
 /**
  * Application Controller - Now TRULY follows SOLID principles!
@@ -29,13 +32,35 @@ export function ApplicationController() {
   const dispatch = useAppDispatch();
   const { activeTab } = useAppSelector(state => state.ui);
   const request = useAppSelector(state => state.request);
+  const fullUrl = useAppSelector(selectFullUrl);
   
-  const { responses, loading, sendRequest } = useApiRequest();
+  const {
+    responses, loading, sendRequest, proxyAvailable, useProxy, setUseProxy
+  } = useApiRequest();
+
+  useEffect(() => {
+    const sharedRequest = RequestStorageService.parseShareFragment(window.location.hash);
+    if (sharedRequest) dispatch(loadRequest(sharedRequest));
+  }, [dispatch]);
 
   // Focused event handlers - minimal UI orchestration only
   const handleTabChange = useCallback((tab: 'request' | 'saved') => {
     dispatch(setActiveTab(tab));
   }, [dispatch]);
+
+  const handleLoadRequest = useCallback((savedRequest: SavedRequest) => {
+    dispatch(loadRequest(RequestStorageService.savedToApiRequest(savedRequest).apiRequest));
+    dispatch(setActiveTab('request'));
+  }, [dispatch]);
+
+  const handleSaveRequest = useCallback(() => {
+    const name = window.prompt('Name this request:');
+    if (!name?.trim()) return;
+    RequestStorageService.saveRequest(
+      RequestStorageService.apiRequestToSaved(request, fullUrl, name.trim())
+    );
+    alert('Request saved. Authorization values were replaced with placeholders.');
+  }, [request, fullUrl]);
 
   return (
     <div className="container-fluid px-3 px-sm-4">
@@ -100,6 +125,10 @@ export function ApplicationController() {
                   {/* Modular Request Form - Redux Connected */}
                   <RequestFormModular />
 
+                  {proxyAvailable && (
+                    <ProxyToggle enabled={useProxy} onChange={setUseProxy} />
+                  )}
+
                   {/* Action Buttons - Redux Connected */}
                   <ActionButtons onSendRequest={sendRequest} loading={loading} />
 
@@ -117,8 +146,8 @@ export function ApplicationController() {
                   aria-labelledby="saved-tab"
                 >
                   <SavedRequests
-                    onLoadRequest={() => console.log('Load request')}
-                    onSaveCurrentRequest={() => console.log('Save current request')}
+                    onLoadRequest={handleLoadRequest}
+                    onSaveCurrentRequest={handleSaveRequest}
                     currentRequestId={undefined}
                   />
                 </div>

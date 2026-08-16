@@ -45,6 +45,27 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({
     }
   };
 
+  const handleRenameRequest = (request: SavedRequest) => {
+    const name = window.prompt('New request name:', request.name);
+    if (name?.trim()) {
+      RequestStorageService.renameRequest(request.id, name);
+      loadSavedRequests();
+    }
+  };
+
+  const handleDuplicateRequest = (requestId: string) => {
+    RequestStorageService.duplicateRequest(requestId);
+    loadSavedRequests();
+  };
+
+  const handleMoveRequest = (request: SavedRequest) => {
+    const folder = window.prompt('Folder name (leave blank for no folder):', request.folder);
+    if (folder !== null) {
+      RequestStorageService.moveRequest(request.id, folder);
+      loadSavedRequests();
+    }
+  };
+
   const handleExportAsCurl = (savedRequest: SavedRequest) => {
     const { apiRequest } = RequestStorageService.savedToApiRequest(savedRequest);
     const curlCommand = CurlUtils.apiRequestToCurl(apiRequest, savedRequest.url);
@@ -171,6 +192,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({
             )}
           </div>
           <div className="text-muted small text-truncate mb-1">{request.url}</div>
+          {request.folder && <div className="small">Folder: {request.folder}</div>}
           {request.description && (
             <div className="text-muted small">{request.description}</div>
           )}
@@ -188,6 +210,27 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({
           )}
         </div>
         <div className="d-flex gap-2 ms-3">
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => handleRenameRequest(request)}
+            aria-label={`Rename ${request.name}`}
+          >
+            Rename
+          </button>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => handleDuplicateRequest(request.id)}
+            aria-label={`Duplicate ${request.name}`}
+          >
+            Duplicate
+          </button>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => handleMoveRequest(request)}
+            aria-label={`Move ${request.name} to folder`}
+          >
+            Folder
+          </button>
           <button
             className={`btn btn-sm ${request.isFavorite ? 'btn-warning' : 'btn-outline-warning'}`}
             onClick={() => handleToggleFavorite(request.id)}
@@ -229,6 +272,10 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({
           Save Current
         </button>
       </div>
+      <p className="alert alert-info small" role="note">
+        Authorization tokens and Authorization header values are never saved, exported, or shared.
+        Re-enter them after loading a request.
+      </p>
 
       {/* Search and filters */}
       <div className="row mb-3">
